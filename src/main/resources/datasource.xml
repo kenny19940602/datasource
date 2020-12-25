@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd">
+
+    <bean id="defaultDataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <property name="driverClassName" value="com.mysql.cj.jdbc.Driver"/>
+        <property name="url" value="${spring.datasource.url}"/>
+        <property name="username" value="${spring.datasource.username}"/>
+        <property name="password" value="${spring.datasource.password}"/>
+<!--        <property name="minIdle" value="${spring.datasource.minIdle}"/>-->
+<!--        <property name="maxActive" value="${spring.datasource.maxActive}"/>-->
+<!--        <property name="initialSize" value="${spring.datasource.initialSize}"/>-->
+        <property name="testOnBorrow" value="true"/>
+        <property name="testWhileIdle" value="true"/>
+        <property name="testOnReturn" value="true"/>
+        <property name="validationQuery" value="select 1"/>
+        <!--<property name="initSQL" value="select 1"/>-->
+    </bean>
+
+    <bean id="druidDynamicDataSource" class="com.kenny.datasource.config.DruidDynamicDataSource">
+        <property name="defaultTargetDataSource" ref="defaultDataSource" />
+        <property name="targetDataSources">
+            <map>
+                <entry key="defaultDataSource" value-ref="defaultDataSource"/>
+                <!-- 这里还可以加多个dataSource -->
+            </map>
+        </property>
+    </bean>
+
+
+    <!-- 注解事务 -->
+    <bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="druidDynamicDataSource" />
+    </bean>
+
+    <!-- 定义SqlSessionFactory -->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+<!--        <property name="configLocation">-->
+<!--            <value>classpath:config/sqlMapConfig.xml</value>-->
+<!--        </property>-->
+        <property name="dataSource" ref="druidDynamicDataSource" />
+<!--        <property name="typeAliasesPackage" value="com.eya.model.domain" />-->
+        <property name="mapperLocations" value="classpath*:com/kenny/datasource/mapper/*.xml" />
+        <!-- define config location -->
+        <!-- <property name="configLocation" value="sqlMapConfig.xml"/> -->
+    </bean>
+
+    <!-- 扫描mybatis的接口类 -->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <property name="basePackage" value="com.kenny.datasource.mapper" />
+    </bean>
+
+
+    <!-- spring 线程池的配置 -->
+    <bean id ="taskExecutor"  class ="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor" >
+        <!-- 线程池维护线程的最少数量 -->
+        <property name ="corePoolSize" value ="5" />
+        <!-- 线程池维护线程所允许的空闲时间 -->
+        <property name ="keepAliveSeconds" value ="30000" />
+        <!-- 线程池维护线程的最大数量 -->
+        <property name ="maxPoolSize" value ="1000" />
+        <!-- 线程池所使用的缓冲队列 -->
+        <property name ="queueCapacity" value ="200" />
+    </bean>
+
+    <!-- 配置线程池 -->
+    <bean id ="dataImportTaskExecutor"  parent="taskExecutor" >
+        <!-- 线程池维护线程的最少数量 -->
+        <property name ="corePoolSize" value ="1" />
+        <!-- 线程池维护线程的最大数量 -->
+        <property name ="maxPoolSize" value ="1" />
+    </bean>
+</beans>
